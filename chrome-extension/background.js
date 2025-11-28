@@ -2,7 +2,7 @@
 const STORAGE_KEY = "mini_idm_detected_urls";
 
 // Debug logging
-const DEBUG = true;
+const DEBUG = false;
 function log(...args) {
   if (DEBUG) console.log("[Mini-IDM-BG]", ...args);
 }

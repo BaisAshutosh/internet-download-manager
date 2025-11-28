@@ -3,8 +3,10 @@ import json
 import sqlite3
 import threading
 from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+import glob
 import uvicorn
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -200,6 +202,42 @@ def list_downloads():
     rows = cur.fetchall()
     conn.close()
     return rows
+
+
+@api.get("/file/{download_id}")
+def get_file(download_id: int, filename: Optional[str] = None):
+    """Serve a completed download file so the browser can save it.
+
+    If `filename` is provided it will be suggested to the browser via
+    the Content-Disposition header. The browser will then prompt the user
+    where to save the file.
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT filename, status FROM downloads WHERE id=?", (download_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return JSONResponse(status_code=404, content={"error": "Download not found"})
+
+    stored_name, status = row
+    if status != "completed":
+        return JSONResponse(status_code=400, content={"error": "File not ready for download"})
+
+    safe = sanitize_filename(stored_name)
+    # find the file on disk (matches downloads/<safe>.*)
+    matches = glob.glob(f"downloads/{safe}.*")
+    if not matches:
+        # try raw stored name as fallback
+        matches = glob.glob(f"downloads/{stored_name}.*")
+
+    if not matches:
+        return JSONResponse(status_code=404, content={"error": "Downloaded file not found on server"})
+
+    file_path = matches[0]
+    suggested = filename or Path(file_path).name
+    return FileResponse(path=file_path, filename=suggested, media_type="application/octet-stream")
 
 
 # -----------------------------
