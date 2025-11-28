@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+aiohttp
+yt-dlp 
+streamlit
+requests
+pydantic
+websockets
+websocket-client

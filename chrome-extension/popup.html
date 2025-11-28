@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mini IDM</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 360px;
+        padding: 12px;
+      }
+      select,
+      input {
+        width: 100%;
+        padding: 6px;
+        margin-top: 6px;
+        box-sizing: border-box;
+      }
+      button {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+      }
+      .small {
+        font-size: 12px;
+        color: #666;
+        margin-top: 6px;
+      }
+      .url-item {
+        word-break: break-all;
+        font-size: 13px;
+        padding: 6px 4px;
+        border-bottom: 1px solid #eee;
+      }
+      .meta {
+        font-size: 11px;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <h3 style="margin: 0 0 6px 0">Mini IDM — Detected Streams</h3>
+
+    <div>
+      <select id="urlSelect" size="6"></select>
+    </div>
+
+    <div style="margin-top: 8px">
+      <label>Filename (optional)</label>
+      <input id="filename" placeholder="myvideo" />
+    </div>
+
+    <div style="margin-top: 8px">
+      <label>Format / quality (yt-dlp format string, optional)</label>
+      <input
+        id="format"
+        placeholder="e.g. bestvideo+bestaudio/best or leave blank"
+      />
+    </div>
+
+    <div style="margin-top: 8px; border-top: 1px solid #ddd; padding-top: 8px;">
+      <label style="font-size: 12px; color: #666;">Manual URL (optional)</label>
+      <input
+        id="manualUrl"
+        placeholder="Paste stream URL if not detected"
+        style="font-size: 12px;"
+      />
+    </div>
+
+    <button id="sendBtn">Send to Downloader</button>
+    <button id="refreshBtn" style="margin-top: 6px">Refresh List</button>
+    <button id="clearBtn" style="margin-top: 6px">Clear Detected</button>
+
+    <div class="small" style="margin-top: 8px">
+      Backend: <code id="backendUrl">http://localhost:8000/download</code>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
