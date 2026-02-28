@@ -1,0 +1,25 @@
+services:
+  mini-idm:
+    build: .
+    container_name: mini-idm
+
+    ports:
+      # Web UI + API + WebSocket all on the same port
+      - "8000:8000"
+
+    volumes:
+      # Downloaded files AND the SQLite database both live here.
+      # Persists across container restarts and rebuilds.
+      - ./downloads:/app/downloads
+
+    restart: unless-stopped
+
+    # Optional: prevent the container from acquiring new privileges
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource limits — yt-dlp can be CPU/memory heavy for large files
+    deploy:
+      resources:
+        limits:
+          memory: 1g
