@@ -440,9 +440,16 @@
             font-size: 0.84em;
             font-weight: 500;
             color: var(--text-0);
-            word-break: break-all;
+            word-break: break-word;
             line-height: 1.4;
             flex: 1;
+        }
+        .dl-sub {
+            font-size: 0.68em;
+            font-weight: 400;
+            color: var(--text-2);
+            margin-bottom: 3px;
+            word-break: break-all;
         }
 
         .pill {
@@ -873,7 +880,7 @@
             rows.forEach(row => {
                 const pct = typeof row.progress === 'number' ? Math.round(row.progress * 100) : 0;
                 downloads[row.id] = { id: row.id, url: row.url, filename: row.filename,
-                                      status: row.status, progress: pct };
+                                      title: row.title || '', status: row.status, progress: pct };
             });
             render();
         } catch {}
@@ -923,7 +930,8 @@
             return `
             <div class="dl-item s-${dl.status}">
                 <div class="dl-head">
-                    <div class="dl-name">${dl.filename || 'Unknown file'}</div>
+                    <div class="dl-name">${dl.title || dl.filename || 'Unknown file'}</div>
+                    ${dl.title && dl.filename ? `<div class="dl-sub">${dl.filename}</div>` : ''}
                     <span class="pill p-${dl.status}">
                         <span class="pill-dot"></span>${dl.status}
                     </span>
@@ -939,7 +947,7 @@
                 ${(dl.status==='completed'||dl.status==='error')?`
                 <div class="dl-foot">
                     ${dl.status==='completed'?`<button class="btn-save"
-                        onclick="saveFile(${dl.id},'${dl.filename.replace(/'/g,"\\'")}')">
+                        onclick="saveFile(${dl.id})">
                         Save File
                     </button>`:'<span></span>'}
                     <button class="btn-del" onclick="deleteDl(${dl.id})" title="Remove">✕ Remove</button>
@@ -954,8 +962,8 @@
         render();
     }
 
-    function saveFile(id, fn) {
-        window.location.href = `${API}/file/${id}?filename=${encodeURIComponent(fn)}`;
+    function saveFile(id) {
+        window.location.href = `${API}/file/${id}`;
     }
 
     /* ── Form ── */

@@ -1,83 +1,220 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Mini IDM</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        width: 400px;
-        padding: 12px;
-      }
-      select,
-      input {
-        width: 100%;
-        padding: 6px;
-        margin-top: 6px;
-        box-sizing: border-box;
-      }
-      button {
-        width: 100%;
-        padding: 8px;
-        margin-top: 10px;
-      }
-      .small {
-        font-size: 12px;
-        color: #666;
-        margin-top: 6px;
-      }
-      .url-item {
-        word-break: break-all;
-        font-size: 13px;
-        padding: 6px 4px;
-        border-bottom: 1px solid #eee;
-      }
-      .meta {
-        font-size: 11px;
-        color: #777;
-      }
+<head>
+  <meta charset="utf-8" />
+  <title>Mini IDM</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    </style>
-  </head>
-  <body>
-      <h3 style="margin: 0 0 6px 0">Mini IDM — Detected Streams</h3>
+    body {
+      font-family: Arial, sans-serif;
+      width: 440px;
+      padding: 14px;
+      background: #111318;
+      color: #dde6ef;
+      font-size: 13px;
+    }
 
-    <div>
-      <select id="urlSelect" size="6"></select>
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e4ecf4;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── URL select ── */
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      background: #1a1e28;
+      border: 1px solid rgba(180,200,215,0.12);
+      border-radius: 6px;
+      color: #c8d8e4;
+      font-size: 12px;
+      outline: none;
+    }
+    select:focus { border-color: rgba(106,171,184,0.45); }
+    option { padding: 4px; }
+
+    /* ── Meta panel ── */
+    #metaPanel {
+      margin-top: 10px;
+      background: #151820;
+      border: 1px solid rgba(180,200,215,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;   /* shown by JS */
+    }
+
+    #metaLoading {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #6a8a9a;
+      font-size: 12px;
+    }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(106,171,184,0.2);
+      border-top-color: #6aabb8;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #metaContent { display: none; padding: 12px 14px; }
+
+    .meta-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e4ecf4;
+      margin-bottom: 4px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .meta-duration {
+      font-size: 11px;
+      color: #5a7a8a;
+      margin-bottom: 10px;
+    }
+
+    .meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #4a6878;
+      margin-bottom: 5px;
+    }
+
+    #formatSelect {
+      width: 100%;
+      padding: 6px 8px;
+      background: #1a1e28;
+      border: 1px solid rgba(180,200,215,0.12);
+      border-radius: 6px;
+      color: #c8d8e4;
+      font-size: 12px;
+      outline: none;
+    }
+    #formatSelect:focus { border-color: rgba(106,171,184,0.45); }
+
+    .meta-fallback {
+      font-size: 11px;
+      color: #6a7a5a;
+      font-style: italic;
+      padding: 10px 14px;
+    }
+
+    /* ── Standard inputs ── */
+    .field { margin-top: 10px; }
+    .field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #4a6878;
+      margin-bottom: 5px;
+    }
+    .field input {
+      width: 100%;
+      padding: 7px 9px;
+      background: #1a1e28;
+      border: 1px solid rgba(180,200,215,0.12);
+      border-radius: 6px;
+      color: #c8d8e4;
+      font-size: 12px;
+      outline: none;
+    }
+    .field input::placeholder { color: #3a5060; }
+    .field input:focus { border-color: rgba(106,171,184,0.45); }
+
+    /* ── Divider ── */
+    .divider {
+      margin: 12px 0;
+      border: none;
+      border-top: 1px solid rgba(180,200,215,0.08);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    #sendBtn    { background: #6aabb8; color: #07090d; }
+    #sendBtn:hover { background: #9dcfca; }
+    #sendBtn:disabled { background: rgba(106,171,184,0.28); color: #3a5060; cursor: not-allowed; }
+    #refreshBtn { background: transparent; border: 1px solid rgba(180,200,215,0.15); color: #7a9aaa; }
+    #refreshBtn:hover { border-color: rgba(180,200,215,0.35); color: #aac0cc; }
+    #clearBtn   { background: transparent; border: 1px solid rgba(200,120,120,0.2); color: #7a5555; }
+    #clearBtn:hover { border-color: rgba(200,120,120,0.4); color: #c87878; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #3a5060;
+    }
+    .footer code { font-size: 11px; color: #4a7080; }
+  </style>
+</head>
+<body>
+
+  <h3>Mini IDM — Detected Streams</h3>
+
+  <!-- Detected URL list -->
+  <select id="urlSelect" size="5"></select>
+
+  <!-- Meta preview panel — shown after a URL is selected -->
+  <div id="metaPanel">
+    <div id="metaLoading">
+      <div class="spinner"></div>
+      Fetching metadata…
     </div>
-
-    <div style="margin-top: 8px">
-      <label>Filename (optional)</label>
-      <input id="filename" placeholder="myvideo" />
+    <div id="metaContent">
+      <div class="meta-title" id="metaTitle"></div>
+      <div class="meta-duration" id="metaDuration"></div>
+      <div class="meta-label">Quality / Format</div>
+      <select id="formatSelect"></select>
     </div>
+    <div id="metaFallback" class="meta-fallback" style="display:none"></div>
+  </div>
 
-    <div style="margin-top: 8px">
-      <label>Format / quality (yt-dlp format string, optional)</label>
-      <input
-        id="format"
-        placeholder="e.g. bestvideo+bestaudio/best or leave blank"
-      />
-    </div>
+  <!-- Filename -->
+  <div class="field">
+    <label>Filename <span style="font-weight:300;opacity:.5;">— optional, auto-filled from title</span></label>
+    <input id="filename" placeholder="Auto-filled from metadata" />
+  </div>
 
-    <div style="margin-top: 8px; border-top: 1px solid #ddd; padding-top: 8px;">
-      <label style="font-size: 12px; color: #666;">Manual URL (optional)</label>
-      <input
-        id="manualUrl"
-        placeholder="Paste stream URL if not detected"
-        style="font-size: 12px;"
-      />
-    </div>
+  <hr class="divider" />
 
-    <button id="sendBtn">Send to Downloader</button>
-    <button id="refreshBtn" style="margin-top: 6px">Refresh List</button>
-    <button id="clearBtn" style="margin-top: 6px">Clear Detected</button>
+  <!-- Manual URL override -->
+  <div class="field">
+    <label>Manual URL <span style="font-weight:300;opacity:.5;">— paste if not detected</span></label>
+    <input id="manualUrl" placeholder="https://…" />
+  </div>
 
-    <div class="small" style="margin-top: 8px">
-      Backend: <code id="backendUrl">http://localhost:8000/download</code>
-    </div>
+  <button class="btn" id="sendBtn">Send to Downloader</button>
+  <button class="btn" id="refreshBtn">Refresh List</button>
+  <button class="btn" id="clearBtn">Clear Detected</button>
 
-    <script src="popup.js"></script>
-  </body>
+  <div class="footer">
+    Backend: <code id="backendUrl">http://localhost:8000</code>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
 </html>
-
-
