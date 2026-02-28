@@ -3,213 +3,319 @@
 <head>
   <meta charset="utf-8" />
   <title>Mini IDM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+        --base:       #f4f6f8;
+        --surface:    #ffffff;
+        --surface-2:  #f8f9fb;
+        --border:     #e2e6ea;
+        --border-2:   #cbd2d9;
+        --text-0:     #1a202c;
+        --text-1:     #4a5568;
+        --text-2:     #a0aec0;
+        --accent:     #0891b2;
+        --accent-dim: #e0f2fe;
+        --green:      #059669;
+        --green-dim:  #ecfdf5;
+        --red:        #dc2626;
+        --red-dim:    #fef2f2;
+        --sans:       'Figtree', system-ui, sans-serif;
+        --serif:      'Playfair Display', Georgia, serif;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      width: 440px;
-      padding: 14px;
-      background: #111318;
-      color: #dde6ef;
-      font-size: 13px;
+        font-family: var(--sans);
+        width: 400px;
+        background: var(--base);
+        color: var(--text-0);
+        font-size: 13px;
+        padding: 0;
     }
 
-    h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: #e4ecf4;
-      margin-bottom: 10px;
-      letter-spacing: 0.02em;
+    /* ── Header ── */
+    .header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 14px 11px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
     }
 
-    /* ── URL select ── */
+    .header-title {
+        font-family: var(--serif);
+        font-size: 1.0em;
+        font-weight: 500;
+        color: var(--text-0);
+    }
+
+    .header-sub {
+        font-size: 0.62em;
+        font-weight: 600;
+        color: var(--text-2);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    /* ── Section ── */
+    .section {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 14px;
+    }
+
+    .section-label {
+        font-size: 0.6em;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-2);
+        margin-bottom: 6px;
+    }
+
+    /* ── Select ── */
     select {
-      width: 100%;
-      padding: 6px 8px;
-      background: #1a1e28;
-      border: 1px solid rgba(180,200,215,0.12);
-      border-radius: 6px;
-      color: #c8d8e4;
-      font-size: 12px;
-      outline: none;
+        width: 100%;
+        padding: 7px 9px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-0);
+        font-family: var(--sans);
+        font-size: 12px;
+        outline: none;
+        cursor: pointer;
     }
-    select:focus { border-color: rgba(106,171,184,0.45); }
-    option { padding: 4px; }
+    select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,145,178,0.08); }
 
     /* ── Meta panel ── */
     #metaPanel {
-      margin-top: 10px;
-      background: #151820;
-      border: 1px solid rgba(180,200,215,0.1);
-      border-radius: 8px;
-      overflow: hidden;
-      display: none;   /* shown by JS */
+        display: none;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-top: 8px;
+        overflow: hidden;
     }
 
     #metaLoading {
-      padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #6a8a9a;
-      font-size: 12px;
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-2);
+        font-size: 11px;
     }
 
     .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(106,171,184,0.2);
-      border-top-color: #6aabb8;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
+        width: 12px; height: 12px;
+        border: 1.5px solid var(--border-2);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        /* The only animation in the popup */
+        animation: spin 0.7s linear infinite;
+        flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #metaContent { display: none; padding: 12px 14px; }
+    #metaContent { display: none; padding: 10px 12px; }
 
     .meta-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #e4ecf4;
-      margin-bottom: 4px;
-      line-height: 1.4;
-      word-break: break-word;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-0);
+        margin-bottom: 2px;
+        line-height: 1.4;
+        word-break: break-word;
     }
 
     .meta-duration {
-      font-size: 11px;
-      color: #5a7a8a;
-      margin-bottom: 10px;
+        font-size: 10px;
+        color: var(--text-2);
+        margin-bottom: 8px;
     }
 
-    .meta-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #4a6878;
-      margin-bottom: 5px;
+    .meta-fmt-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-2);
+        margin-bottom: 5px;
     }
 
     #formatSelect {
-      width: 100%;
-      padding: 6px 8px;
-      background: #1a1e28;
-      border: 1px solid rgba(180,200,215,0.12);
-      border-radius: 6px;
-      color: #c8d8e4;
-      font-size: 12px;
-      outline: none;
+        width: 100%;
+        padding: 6px 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        color: var(--text-0);
+        font-family: var(--sans);
+        font-size: 11px;
+        outline: none;
     }
-    #formatSelect:focus { border-color: rgba(106,171,184,0.45); }
+    #formatSelect:focus { border-color: var(--accent); }
 
-    .meta-fallback {
-      font-size: 11px;
-      color: #6a7a5a;
-      font-style: italic;
-      padding: 10px 14px;
+    #metaFallback {
+        display: none;
+        padding: 10px 12px;
+        font-size: 11px;
+        color: var(--text-2);
+        font-style: italic;
     }
 
-    /* ── Standard inputs ── */
-    .field { margin-top: 10px; }
+    /* ── Inputs ── */
+    .field { margin-top: 8px; }
+    .field:first-child { margin-top: 0; }
+
     .field label {
-      display: block;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #4a6878;
-      margin-bottom: 5px;
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-2);
+        margin-bottom: 5px;
     }
+
     .field input {
-      width: 100%;
-      padding: 7px 9px;
-      background: #1a1e28;
-      border: 1px solid rgba(180,200,215,0.12);
-      border-radius: 6px;
-      color: #c8d8e4;
-      font-size: 12px;
-      outline: none;
+        width: 100%;
+        padding: 7px 9px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-family: var(--sans);
+        font-size: 12px;
+        color: var(--text-0);
+        outline: none;
     }
-    .field input::placeholder { color: #3a5060; }
-    .field input:focus { border-color: rgba(106,171,184,0.45); }
+    .field input::placeholder { color: var(--text-2); }
+    .field input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(8,145,178,0.08);
+    }
 
     /* ── Divider ── */
     .divider {
-      margin: 12px 0;
-      border: none;
-      border-top: 1px solid rgba(180,200,215,0.08);
+        height: 1px;
+        background: var(--border);
+        border: none;
     }
 
-    /* ── Buttons ── */
-    .btn {
-      width: 100%;
-      padding: 8px;
-      margin-top: 8px;
-      border: none;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.18s;
+    /* ── Action buttons ── */
+    .actions {
+        background: var(--surface);
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
     }
-    #sendBtn    { background: #6aabb8; color: #07090d; }
-    #sendBtn:hover { background: #9dcfca; }
-    #sendBtn:disabled { background: rgba(106,171,184,0.28); color: #3a5060; cursor: not-allowed; }
-    #refreshBtn { background: transparent; border: 1px solid rgba(180,200,215,0.15); color: #7a9aaa; }
-    #refreshBtn:hover { border-color: rgba(180,200,215,0.35); color: #aac0cc; }
-    #clearBtn   { background: transparent; border: 1px solid rgba(200,120,120,0.2); color: #7a5555; }
-    #clearBtn:hover { border-color: rgba(200,120,120,0.4); color: #c87878; }
+
+    .btn {
+        width: 100%;
+        padding: 8px;
+        border: none;
+        border-radius: 6px;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    #sendBtn {
+        background: var(--accent);
+        color: #fff;
+    }
+    #sendBtn:hover    { background: #0e7490; }
+    #sendBtn:disabled { background: var(--accent-dim); color: var(--text-2); cursor: not-allowed; }
+
+    #refreshBtn {
+        background: var(--surface-2);
+        color: var(--text-1);
+        border: 1px solid var(--border);
+    }
+    #refreshBtn:hover { background: var(--base); border-color: var(--border-2); }
+
+    #clearBtn {
+        background: transparent;
+        color: var(--text-2);
+        border: 1px solid var(--border);
+    }
+    #clearBtn:hover { color: var(--red); border-color: #fca5a5; }
 
     /* ── Footer ── */
     .footer {
-      margin-top: 10px;
-      font-size: 11px;
-      color: #3a5060;
+        padding: 8px 14px;
+        font-size: 10px;
+        color: var(--text-2);
+        background: var(--base);
+        border-top: 1px solid var(--border);
     }
-    .footer code { font-size: 11px; color: #4a7080; }
+    .footer code { font-size: 10px; color: var(--text-1); }
   </style>
 </head>
 <body>
 
-  <h3>Mini IDM — Detected Streams</h3>
-
-  <!-- Detected URL list -->
-  <select id="urlSelect" size="5"></select>
-
-  <!-- Meta preview panel — shown after a URL is selected -->
-  <div id="metaPanel">
-    <div id="metaLoading">
-      <div class="spinner"></div>
-      Fetching metadata…
-    </div>
-    <div id="metaContent">
-      <div class="meta-title" id="metaTitle"></div>
-      <div class="meta-duration" id="metaDuration"></div>
-      <div class="meta-label">Quality / Format</div>
-      <select id="formatSelect"></select>
-    </div>
-    <div id="metaFallback" class="meta-fallback" style="display:none"></div>
+  <!-- Header -->
+  <div class="header">
+    <span class="header-title">Mini IDM</span>
+    <span class="header-sub">Stream Detector</span>
   </div>
 
-  <!-- Filename -->
-  <div class="field">
-    <label>Filename <span style="font-weight:300;opacity:.5;">— optional, auto-filled from title</span></label>
-    <input id="filename" placeholder="Auto-filled from metadata" />
+  <!-- Detected streams -->
+  <div class="section">
+    <div class="section-label">Detected Streams</div>
+    <select id="urlSelect" size="4"></select>
+
+    <!-- Meta preview -->
+    <div id="metaPanel">
+      <div id="metaLoading">
+        <div class="spinner"></div>
+        Fetching metadata…
+      </div>
+      <div id="metaContent">
+        <div class="meta-title"    id="metaTitle"></div>
+        <div class="meta-duration" id="metaDuration"></div>
+        <div class="meta-fmt-label">Quality / Format</div>
+        <select id="formatSelect"></select>
+      </div>
+      <div id="metaFallback"></div>
+    </div>
   </div>
 
   <hr class="divider" />
 
-  <!-- Manual URL override -->
-  <div class="field">
-    <label>Manual URL <span style="font-weight:300;opacity:.5;">— paste if not detected</span></label>
-    <input id="manualUrl" placeholder="https://…" />
+  <!-- Filename -->
+  <div class="section">
+    <div class="field">
+      <label>Filename <span style="font-weight:400;opacity:.5;">— optional</span></label>
+      <input id="filename" placeholder="Auto-filled from metadata" />
+    </div>
   </div>
 
-  <button class="btn" id="sendBtn">Send to Downloader</button>
-  <button class="btn" id="refreshBtn">Refresh List</button>
-  <button class="btn" id="clearBtn">Clear Detected</button>
+  <hr class="divider" />
+
+  <!-- Manual URL -->
+  <div class="section">
+    <div class="field">
+      <label>Manual URL <span style="font-weight:400;opacity:.5;">— paste if not detected</span></label>
+      <input id="manualUrl" placeholder="https://…" />
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn" id="sendBtn">Send to Downloader</button>
+    <button class="btn" id="refreshBtn">Refresh List</button>
+    <button class="btn" id="clearBtn">Clear Detected</button>
+  </div>
 
   <div class="footer">
     Backend: <code id="backendUrl">http://localhost:8000</code>

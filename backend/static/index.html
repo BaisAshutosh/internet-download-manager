@@ -3,251 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IDM — Internet Download Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Download Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&family=Playfair+Display:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --black:           #06070b;
-            --surface-0:       #0c0e13;
-            --surface-1:       rgba(14, 17, 24, 0.96);
-            --surface-2:       rgba(18, 22, 31, 0.82);
-            --border:          rgba(180, 200, 215, 0.08);
-            --border-hover:    rgba(180, 210, 225, 0.18);
+            --base:        #f4f6f8;
+            --surface:     #ffffff;
+            --surface-2:   #f8f9fb;
+            --border:      #e2e6ea;
+            --border-2:    #cbd2d9;
 
-            --pearl-0:         #e4edf2;
-            --pearl-1:         #c2d6e0;
-            --pearl-2:         #9bbccc;
-            --pearl-cool:      #cce0e8;
-            --pearl-lavender:  #d8d4e8;
-            --pearl-warm:      #e0d8cf;
+            --text-0:      #1a202c;
+            --text-1:      #4a5568;
+            --text-2:      #a0aec0;
 
-            --teal:            #6aabb8;
-            --teal-dim:        rgba(106, 171, 184, 0.12);
-            --seafoam:         #9dcfca;
-            --green:           #7bc8a0;
-            --green-dim:       rgba(123, 200, 160, 0.1);
-            --amber:           #c8a96a;
-            --amber-dim:       rgba(200, 169, 106, 0.1);
-            --red:             #c87878;
-            --red-dim:         rgba(200, 120, 120, 0.1);
+            --accent:      #0891b2;
+            --accent-dim:  #e0f2fe;
+            --accent-text: #0e7490;
 
-            --text-0:          #dde8f0;
-            --text-1:          #8aa0b0;
-            --text-2:          #3f5468;
+            --green:       #059669;
+            --green-dim:   #ecfdf5;
+            --amber:       #d97706;
+            --amber-dim:   #fffbeb;
+            --red:         #dc2626;
+            --red-dim:     #fef2f2;
+            --amber-dim:   #fffbeb;
 
-            --serif:           'Cormorant Garamond', Georgia, serif;
-            --sans:            'DM Sans', system-ui, sans-serif;
-            --r-sm:            6px;
-            --r-md:            10px;
-            --r-lg:            16px;
+            --serif:       'Playfair Display', Georgia, serif;
+            --sans:        'Figtree', system-ui, sans-serif;
+            --r:           8px;
         }
 
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        html { scrollbar-width: thin; scrollbar-color: rgba(180,200,215,0.1) transparent; }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-thumb { background: rgba(180,200,215,0.1); border-radius: 2px; }
+        html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
         body {
             font-family: var(--sans);
-            background: var(--black);
+            background: var(--base);
             min-height: 100vh;
             color: var(--text-0);
-            overflow-x: hidden;
-            padding-bottom: 80px;
+            padding-bottom: 60px;
         }
 
-        /* ═══ PEARL BACKGROUND ═══ */
-        .scene {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-
-        /* Large distant ambient glow orbs — like light refracting through deep water */
-        .glow {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-        }
-        .glow-a {
-            width: 600px; height: 600px;
-            top: -180px; right: -120px;
-            background: radial-gradient(circle at 40% 40%,
-                rgba(180, 210, 228, 0.055) 0%,
-                rgba(216, 210, 232, 0.03)  35%,
-                rgba(150, 190, 215, 0.015) 65%,
-                transparent 80%);
-            animation: waveA 26s ease-in-out infinite;
-        }
-        .glow-b {
-            width: 500px; height: 500px;
-            bottom: -80px; left: -100px;
-            background: radial-gradient(circle at 55% 48%,
-                rgba(140, 200, 195, 0.06) 0%,
-                rgba(180, 210, 225, 0.03) 45%,
-                transparent 72%);
-            animation: waveB 32s ease-in-out infinite;
-        }
-        .glow-c {
-            width: 340px; height: 340px;
-            top: 38%; left: 38%;
-            background: radial-gradient(circle,
-                rgba(210, 205, 228, 0.04) 0%,
-                transparent 68%);
-            filter: blur(60px);
-            animation: waveC 40s ease-in-out infinite;
-        }
-
-        @keyframes waveA {
-            0%,100% { transform: translate(0,0) scale(1); }
-            33%      { transform: translate(-28px, 36px) scale(1.04); }
-            66%      { transform: translate(18px,-18px) scale(0.97); }
-        }
-        @keyframes waveB {
-            0%,100% { transform: translate(0,0) scale(1); }
-            40%      { transform: translate(36px,-28px) scale(1.05); }
-            75%      { transform: translate(-14px, 22px) scale(0.96); }
-        }
-        @keyframes waveC {
-            0%,100% { transform: translate(0,0); }
-            50%      { transform: translate(22px, 30px); }
-        }
-
-        /* Floating pearl particles */
-        .pearl-p {
-            position: absolute;
-            border-radius: 50%;
-            background: radial-gradient(circle at 33% 33%,
-                rgba(228, 238, 245, 0.7) 0%,
-                rgba(194, 214, 228, 0.35) 30%,
-                rgba(170, 198, 218, 0.12) 60%,
-                transparent 80%);
-            box-shadow:
-                0 0 6px rgba(200, 220, 235, 0.22),
-                inset 0 1px 2px rgba(255,255,255,0.3);
-            animation: risePearl linear infinite;
-        }
-
-        @keyframes risePearl {
-            0%   { transform: translateY(105vh); opacity: 0; }
-            6%   { opacity: 1; }
-            92%  { opacity: 0.55; }
-            100% { transform: translateY(-6vh); opacity: 0; }
-        }
-
-        /* ═══ LAYOUT ═══ */
-        .shell {
-            max-width: 1020px;
-            margin: 0 auto;
-            padding: 0 28px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ═══ TOP BAR ═══ */
+        /* ── TOPBAR ── */
         .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 30px 0 26px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 36px;
-            animation: up 0.55s ease both;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
-        .brand { display: flex; align-items: baseline; gap: 16px; }
+        .brand {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
 
         .brand-name {
             font-family: var(--serif);
-            font-size: 1.7em;
+            font-size: 1.15em;
             font-weight: 500;
-            color: var(--pearl-0);
-            letter-spacing: 0.01em;
-            line-height: 1;
+            color: var(--text-0);
+            letter-spacing: -0.01em;
         }
 
         .brand-ver {
-            font-size: 0.66em;
-            font-weight: 400;
+            font-size: 0.62em;
+            font-weight: 500;
             color: var(--text-2);
-            letter-spacing: 0.14em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
 
-        .topbar-meta {
+        .topbar-right {
             font-size: 0.68em;
-            font-weight: 400;
+            font-weight: 500;
             color: var(--text-2);
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
         }
 
-        /* ═══ STATS ═══ */
+        /* ── SHELL ── */
+        .shell {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 28px 32px;
+        }
+
+        /* ── STATS ── */
         .stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--border);
             border: 1px solid var(--border);
-            border-radius: var(--r-md);
+            border-radius: var(--r);
             overflow: hidden;
-            margin-bottom: 28px;
-            animation: up 0.55s 0.07s ease both;
+            margin-bottom: 20px;
         }
-
-        .stat + .stat { border-left: 1px solid var(--border); }
 
         .stat {
-            background: var(--surface-0);
-            padding: 18px 24px;
-            transition: background 0.2s;
+            background: var(--surface);
+            padding: 16px 20px;
         }
-        .stat:hover { background: rgba(18, 22, 32, 0.95); }
 
         .stat-n {
             font-family: var(--serif);
-            font-size: 2em;
-            font-weight: 500;
+            font-size: 1.9em;
+            font-weight: 400;
             line-height: 1;
-            margin-bottom: 5px;
-            color: var(--pearl-0);
+            margin-bottom: 4px;
+            color: var(--text-0);
         }
-        .stat-n.c-teal  { color: var(--teal); }
-        .stat-n.c-green { color: var(--green); }
-        .stat-n.c-amber { color: var(--amber); }
+        .stat-n.c-accent { color: var(--accent); }
+        .stat-n.c-green  { color: var(--green); }
+        .stat-n.c-amber  { color: var(--amber); }
 
         .stat-l {
-            font-size: 0.64em;
-            font-weight: 500;
+            font-size: 0.62em;
+            font-weight: 600;
             color: var(--text-2);
             letter-spacing: 0.1em;
             text-transform: uppercase;
         }
 
-        /* ═══ GRID ═══ */
+        /* ── GRID ── */
         .grid {
             display: grid;
-            grid-template-columns: 310px 1fr;
-            gap: 18px;
-            margin-bottom: 18px;
-            animation: up 0.55s 0.13s ease both;
+            grid-template-columns: 300px 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
         }
 
-        /* ═══ CARD ═══ */
+        /* ── CARD ── */
         .card {
-            background: var(--surface-1);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            overflow: hidden;
-            transition: border-color 0.28s;
+            border-radius: var(--r);
         }
-        .card:hover { border-color: var(--border-hover); }
 
         .card-hd {
-            padding: 20px 24px 16px;
+            padding: 16px 20px 14px;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -255,215 +160,191 @@
         }
 
         .card-title {
-            font-family: var(--serif);
-            font-size: 1.02em;
-            font-weight: 500;
-            color: var(--pearl-1);
-            letter-spacing: 0.015em;
+            font-size: 0.82em;
+            font-weight: 600;
+            color: var(--text-0);
+            letter-spacing: 0.02em;
         }
 
         .card-sub {
-            font-size: 0.63em;
-            font-weight: 500;
+            font-size: 0.62em;
+            font-weight: 600;
             color: var(--text-2);
             letter-spacing: 0.1em;
             text-transform: uppercase;
         }
 
-        .card-bd { padding: 24px; }
+        .card-bd { padding: 20px; }
 
-        /* ═══ FORM ═══ */
-        .field { margin-bottom: 18px; }
+        /* ── FORM ── */
+        .field { margin-bottom: 14px; }
 
         .f-label {
             display: block;
-            font-size: 0.64em;
+            font-size: 0.62em;
             font-weight: 600;
             color: var(--text-1);
-            letter-spacing: 0.12em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .f-input {
             width: 100%;
-            padding: 11px 13px;
-            background: rgba(7, 9, 14, 0.75);
+            padding: 9px 11px;
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--r-sm);
+            border-radius: 6px;
             font-family: var(--sans);
-            font-size: 0.83em;
-            font-weight: 300;
+            font-size: 0.82em;
+            font-weight: 400;
             color: var(--text-0);
             outline: none;
-            transition: border-color 0.22s, box-shadow 0.22s;
+            transition: border-color 0.15s;
         }
         .f-input::placeholder { color: var(--text-2); }
         .f-input:focus {
-            border-color: rgba(106,171,184,0.5);
-            box-shadow: 0 0 0 3px rgba(106,171,184,0.06);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(8,145,178,0.08);
         }
 
-        .btn-row { display: flex; gap: 10px; margin-top: 22px; }
+        .btn-row { display: flex; gap: 8px; margin-top: 18px; }
 
         .btn {
             border: none;
-            border-radius: var(--r-sm);
+            border-radius: 6px;
             font-family: var(--sans);
-            font-size: 0.77em;
+            font-size: 0.76em;
             font-weight: 600;
-            letter-spacing: 0.07em;
-            text-transform: uppercase;
+            letter-spacing: 0.04em;
             cursor: pointer;
-            transition: all 0.22s;
+            transition: background 0.15s, color 0.15s;
         }
 
         .btn-primary {
             flex: 1;
-            padding: 11px 18px;
-            background: var(--teal);
-            color: #07090d;
+            padding: 10px 16px;
+            background: var(--accent);
+            color: #fff;
         }
-        .btn-primary:hover {
-            background: var(--seafoam);
-            box-shadow: 0 4px 18px rgba(106,171,184,0.28);
-        }
+        .btn-primary:hover   { background: #0e7490; }
         .btn-primary:disabled {
-            background: rgba(106,171,184,0.28);
-            color: rgba(7,9,13,0.4);
+            background: var(--accent-dim);
+            color: var(--text-2);
             cursor: not-allowed;
         }
 
         .btn-ghost {
-            padding: 11px 16px;
-            background: transparent;
-            color: var(--text-2);
+            padding: 10px 14px;
+            background: var(--surface-2);
+            color: var(--text-1);
             border: 1px solid var(--border);
         }
-        .btn-ghost:hover {
-            border-color: var(--border-hover);
-            color: var(--text-1);
-        }
+        .btn-ghost:hover { background: var(--base); border-color: var(--border-2); }
 
         #formStatus {
-            margin-top: 14px;
-            font-size: 0.75em;
-            font-weight: 400;
+            margin-top: 10px;
+            font-size: 0.74em;
             min-height: 18px;
         }
         #formStatus.ok  { color: var(--green); }
         #formStatus.err { color: var(--red); }
 
-        /* ═══ TIPS ═══ */
+        /* ── TIPS ── */
         .tips-card { display: flex; flex-direction: column; justify-content: center; }
 
         .tip {
             display: flex;
             align-items: flex-start;
-            gap: 16px;
-            padding: 16px 0;
+            gap: 14px;
+            padding: 14px 0;
             border-bottom: 1px solid var(--border);
         }
-        .tip:first-child { padding-top: 2px; }
-        .tip:last-child  { border-bottom: none; padding-bottom: 2px; }
+        .tip:first-child { padding-top: 0; }
+        .tip:last-child  { border-bottom: none; padding-bottom: 0; }
 
         .tip-n {
             font-family: var(--serif);
-            font-size: 1.25em;
+            font-size: 1.1em;
             font-weight: 400;
             color: var(--text-2);
+            min-width: 20px;
             line-height: 1;
-            margin-top: 2px;
-            min-width: 22px;
+            margin-top: 1px;
         }
 
         .tip-body strong {
             display: block;
-            font-size: 0.8em;
+            font-size: 0.78em;
             font-weight: 600;
-            color: var(--text-1);
-            margin-bottom: 3px;
+            color: var(--text-0);
+            margin-bottom: 2px;
         }
         .tip-body p {
-            font-size: 0.75em;
-            font-weight: 300;
-            color: var(--text-2);
-            line-height: 1.6;
+            font-size: 0.73em;
+            font-weight: 400;
+            color: var(--text-1);
+            line-height: 1.55;
         }
 
-        /* ═══ DOWNLOADS PANEL ═══ */
-        .dl-card { animation: up 0.55s 0.2s ease both; }
+        /* ── DOWNLOAD LIST ── */
+        .dl-list {
+            padding: 12px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-        .dl-list { padding: 12px 24px 24px; display: flex; flex-direction: column; gap: 10px; }
-
-        /* ═══ DOWNLOAD ITEM ═══ */
+        /* ── DOWNLOAD ITEM ── */
         .dl-item {
-            position: relative;
-            background: rgba(9, 12, 18, 0.72);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--r-md);
-            padding: 16px 18px 16px 22px;
-            transition: border-color 0.25s, box-shadow 0.25s;
-            overflow: hidden;
+            border-radius: var(--r);
+            padding: 14px 16px;
+            border-left: 3px solid var(--border-2);
         }
 
-        .dl-item:hover {
-            border-color: var(--border-hover);
-            box-shadow: 0 2px 18px rgba(0,0,0,0.35);
-        }
-
-        /* Accent strip */
-        .dl-item::before {
-            content: '';
-            position: absolute;
-            left: 0; top: 14px; bottom: 14px;
-            width: 2px;
-            border-radius: 0 2px 2px 0;
-            background: var(--teal);
-            opacity: 0.45;
-            transition: opacity 0.25s;
-        }
-        .dl-item:hover::before          { opacity: 0.9; }
-        .dl-item.s-completed::before    { background: var(--green);  opacity: 0.7; }
-        .dl-item.s-error::before        { background: var(--red);    opacity: 0.7; }
-        .dl-item.s-queued::before       { background: var(--amber);  opacity: 0.55; }
+        .dl-item.s-downloading { border-left-color: var(--accent); }
+        .dl-item.s-completed   { border-left-color: var(--green); }
+        .dl-item.s-error       { border-left-color: var(--red); }
+        .dl-item.s-queued      { border-left-color: var(--amber); }
 
         .dl-head {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 5px;
+            gap: 10px;
+            margin-bottom: 2px;
         }
 
         .dl-name {
-            font-size: 0.84em;
-            font-weight: 500;
+            font-size: 0.83em;
+            font-weight: 600;
             color: var(--text-0);
             word-break: break-word;
             line-height: 1.4;
             flex: 1;
         }
+
         .dl-sub {
             font-size: 0.68em;
-            font-weight: 400;
             color: var(--text-2);
-            margin-bottom: 3px;
+            margin-bottom: 4px;
             word-break: break-all;
         }
 
+        /* Status pill — text only, no background */
         .pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 3px 9px;
-            border-radius: 20px;
-            font-size: 0.61em;
-            font-weight: 600;
+            gap: 4px;
+            font-size: 0.6em;
+            font-weight: 700;
             letter-spacing: 0.09em;
             text-transform: uppercase;
             white-space: nowrap;
             flex-shrink: 0;
+            margin-top: 1px;
         }
         .pill-dot {
             width: 5px; height: 5px;
@@ -471,252 +352,229 @@
             background: currentColor;
         }
 
-        .p-downloading {
-            color: var(--teal);
-            background: var(--teal-dim);
-            border: 1px solid rgba(106,171,184,0.2);
-        }
-        .p-downloading .pill-dot { animation: blink 1.5s ease-in-out infinite; }
-
-        .p-completed {
-            color: var(--green);
-            background: var(--green-dim);
-            border: 1px solid rgba(123,200,160,0.2);
-        }
-        .p-queued {
-            color: var(--amber);
-            background: var(--amber-dim);
-            border: 1px solid rgba(200,169,106,0.2);
-        }
-        .p-error {
-            color: var(--red);
-            background: var(--red-dim);
-            border: 1px solid rgba(200,120,120,0.2);
-        }
+        .p-queued      { color: var(--amber); }
+        .p-downloading { color: var(--accent); }
+        .p-completed   { color: var(--green); }
+        .p-error       { color: var(--red); }
+        .p-unknown     { color: var(--text-2); }
 
         .dl-url {
-            font-size: 0.7em;
-            font-weight: 300;
+            font-size: 0.68em;
             color: var(--text-2);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            word-break: break-all;
+            line-height: 1.4;
         }
 
         /* Progress */
         .prog-track {
-            width: 100%;
             height: 3px;
-            background: rgba(255,255,255,0.04);
-            border-radius: 3px;
+            background: var(--base);
+            border-radius: 2px;
             overflow: hidden;
-            margin-bottom: 7px;
+            margin-bottom: 6px;
         }
 
         .prog-fill {
             height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(90deg, var(--teal), var(--seafoam));
-            transition: width 0.45s ease;
+            background: var(--accent);
+            border-radius: 2px;
+            /* ONLY animation in the entire UI */
+            transition: width 200ms linear;
         }
 
-        /* Pearl iridescent shimmer while downloading */
-        .s-downloading .prog-fill {
-            background: linear-gradient(90deg,
-                var(--teal)         0%,
-                var(--seafoam)      30%,
-                var(--pearl-cool)   55%,
-                var(--pearl-lavender) 70%,
-                var(--teal)         100%);
-            background-size: 220% 100%;
-            animation: iridescent 3s linear infinite;
-        }
-
-        .s-completed .prog-fill { background: linear-gradient(90deg, var(--green), #a8d8bc); }
-        .s-error .prog-fill     { background: linear-gradient(90deg, var(--red),   #d4a0a0); }
-
-        @keyframes iridescent {
-            0%   { background-position: 220% 0; }
-            100% { background-position: -220% 0; }
-        }
+        .s-completed .prog-fill { background: var(--green); }
+        .s-error .prog-fill     { background: var(--red); }
 
         .prog-foot {
             display: flex;
             justify-content: space-between;
+            margin-bottom: 2px;
         }
+
         .prog-pct, .dl-id {
-            font-size: 0.68em;
-            font-weight: 400;
+            font-size: 0.65em;
+            font-weight: 500;
             color: var(--text-2);
         }
 
-        .dl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+        .dl-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
 
         .btn-save {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 6px 14px;
+            padding: 5px 12px;
             background: var(--green-dim);
             color: var(--green);
-            border: 1px solid rgba(123,200,160,0.2);
-            border-radius: var(--r-sm);
+            border: 1px solid #a7f3d0;
+            border-radius: 5px;
             font-family: var(--sans);
-            font-size: 0.7em;
+            font-size: 0.68em;
             font-weight: 600;
-            letter-spacing: 0.07em;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.22s;
+            transition: background 0.15s;
         }
-        .btn-save:hover {
-            background: rgba(123,200,160,0.18);
-            box-shadow: 0 0 14px rgba(123,200,160,0.18);
-        }
+        .btn-save:hover { background: #d1fae5; }
 
         .btn-del {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 6px 12px;
-            background: var(--red-dim);
-            color: var(--red);
-            border: 1px solid rgba(200,120,120,0.2);
-            border-radius: var(--r-sm);
+            padding: 5px 12px;
+            background: transparent;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+            border-radius: 5px;
             font-family: var(--sans);
-            font-size: 0.7em;
+            font-size: 0.68em;
             font-weight: 600;
-            letter-spacing: 0.07em;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.22s;
+            transition: color 0.15s, border-color 0.15s;
         }
-        .btn-del:hover {
-            background: rgba(200,120,120,0.2);
-            box-shadow: 0 0 12px rgba(200,120,120,0.15);
-        }
+        .btn-del:hover { color: var(--red); border-color: #fca5a5; }
 
-        /* ═══ EMPTY STATE ═══ */
+        .btn-pause {
+            padding: 5px 12px;
+            background: var(--accent-dim);
+            color: var(--accent-text);
+            border: 1px solid #bae6fd;
+            border-radius: 5px;
+            font-family: var(--sans);
+            font-size: 0.68em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-pause:hover { background: #bae6fd; }
+
+        .btn-resume {
+            padding: 5px 12px;
+            background: var(--amber-dim, #fffbeb);
+            color: var(--amber);
+            border: 1px solid #fde68a;
+            border-radius: 5px;
+            font-family: var(--sans);
+            font-size: 0.68em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-resume:hover { background: #fde68a; }
+
+        .btn-cancel {
+            padding: 5px 12px;
+            background: transparent;
+            color: var(--red);
+            border: 1px solid #fca5a5;
+            border-radius: 5px;
+            font-family: var(--sans);
+            font-size: 0.68em;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-cancel:hover { background: var(--red-dim); }
+
+        .p-paused    { color: var(--amber); }
+        .p-cancelled { color: var(--text-2); }
+
+        /* ── EMPTY STATE ── */
         .empty {
-            padding: 58px 20px;
+            padding: 48px 20px;
             text-align: center;
         }
 
-        .empty-pearl {
-            width: 52px; height: 52px;
-            margin: 0 auto 18px;
+        .empty-icon {
+            width: 36px; height: 36px;
+            margin: 0 auto 14px;
+            border: 1.5px solid var(--border-2);
             border-radius: 50%;
-            background: radial-gradient(circle at 34% 34%,
-                rgba(220, 235, 245, 0.1)  0%,
-                rgba(180, 210, 228, 0.05) 50%,
-                transparent 80%);
-            border: 1px solid rgba(180, 210, 225, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .empty-pearl::after {
-            content: '';
-            width: 16px; height: 16px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 32%,
-                rgba(210, 228, 242, 0.65) 0%,
-                rgba(170, 200, 220, 0.25) 55%,
-                transparent 80%);
-            box-shadow:
-                0 0 8px rgba(190, 215, 235, 0.2),
-                inset 0 1px 3px rgba(255,255,255,0.2);
+            color: var(--text-2);
+            font-size: 14px;
         }
 
         .empty-head {
-            font-family: var(--serif);
-            font-size: 1.05em;
-            font-weight: 400;
+            font-size: 0.88em;
+            font-weight: 600;
             color: var(--text-1);
-            margin-bottom: 7px;
+            margin-bottom: 5px;
         }
         .empty-sub {
-            font-size: 0.75em;
-            font-weight: 300;
+            font-size: 0.74em;
             color: var(--text-2);
-            line-height: 1.65;
+            line-height: 1.6;
         }
 
-        /* ═══ CONNECTION STATUS ═══ */
+        /* ── CONNECTION STATUS ── */
         #connStatus {
             position: fixed;
-            bottom: 24px;
+            bottom: 20px;
             right: 24px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 0.65em;
-            font-weight: 500;
-            letter-spacing: 0.1em;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.62em;
+            font-weight: 600;
+            letter-spacing: 0.09em;
             text-transform: uppercase;
-            border: 1px solid;
-            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            background: var(--surface);
             z-index: 100;
-            transition: all 0.35s;
         }
-        #connStatus.connected {
-            color: var(--green);
-            background: rgba(6,7,11,0.9);
-            border-color: rgba(123,200,160,0.2);
-        }
-        #connStatus.disconnected {
-            color: var(--text-2);
-            background: rgba(6,7,11,0.88);
-            border-color: var(--border);
-        }
+        #connStatus.connected    { color: var(--green); border-color: #a7f3d0; }
+        #connStatus.disconnected { color: var(--text-2); }
+
         .conn-dot {
             width: 6px; height: 6px;
             border-radius: 50%;
             background: currentColor;
         }
-        .connected .conn-dot { animation: blink 1.6s ease-in-out infinite; }
-
-        /* ═══ KEYFRAMES ═══ */
-        @keyframes up {
-            from { opacity:0; transform: translateY(12px); }
-            to   { opacity:1; transform: translateY(0); }
+        /* Single minimal animation — just the connection dot blinking */
+        .connected .conn-dot {
+            animation: blink 2s ease-in-out infinite;
         }
         @keyframes blink {
-            0%,100% { opacity:1; }
-            50%      { opacity:0.25; }
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.25; }
         }
 
-        /* ═══ RESPONSIVE ═══ */
-        @media (max-width: 700px) {
+        /* ── RESPONSIVE ── */
+        @media (max-width: 680px) {
+            .topbar { padding: 0 16px; }
+            .shell  { padding: 16px; }
             .grid   { grid-template-columns: 1fr; }
-            .stats  { grid-template-columns: repeat(2,1fr); }
-            .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .stats  { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
 
-<!-- Deep ocean pearl scene -->
-<div class="scene" id="scene" aria-hidden="true">
-    <div class="glow glow-a"></div>
-    <div class="glow glow-b"></div>
-    <div class="glow glow-c"></div>
-</div>
+<nav class="topbar">
+    <div class="brand">
+        <span class="brand-name">Download Manager</span>
+        <span class="brand-ver">v 2.0</span>
+    </div>
+    <span class="topbar-right">localhost : 8000</span>
+</nav>
 
 <div class="shell">
-
-    <!-- Top Bar -->
-    <nav class="topbar">
-        <div class="brand">
-            <span class="brand-name">Download Manager</span>
-            <span class="brand-ver">v 2.0</span>
-        </div>
-        <span class="topbar-meta">localhost : 8000</span>
-    </nav>
 
     <!-- Stats -->
     <div class="stats">
@@ -725,7 +583,7 @@
             <div class="stat-l">Total</div>
         </div>
         <div class="stat">
-            <div class="stat-n c-teal" id="sActive">0</div>
+            <div class="stat-n c-accent" id="sActive">0</div>
             <div class="stat-l">Downloading</div>
         </div>
         <div class="stat">
@@ -738,7 +596,7 @@
         </div>
     </div>
 
-    <!-- Grid: Form + Tips -->
+    <!-- Form + Tips -->
     <div class="grid">
 
         <div class="card">
@@ -750,13 +608,13 @@
                 <form id="downloadForm" onsubmit="return false;">
                     <div class="field">
                         <label class="f-label">URL *</label>
-                        <input class="f-input" type="url" id="url" placeholder="https://example.com/file.zip" required>
+                        <input class="f-input" type="url" id="url" placeholder="https://…" required>
                     </div>
                     <div class="field">
-                        <label class="f-label">Filename <span style="opacity:.4;font-weight:300;">— optional</span></label>
+                        <label class="f-label">Filename <span style="font-weight:400;opacity:.5;">— optional</span></label>
                         <input class="f-input" type="text" id="filename" placeholder="Auto-detect if empty">
                     </div>
-                    <div class="field">
+                    <div class="field" style="margin-bottom:0;">
                         <label class="f-label">Quality</label>
                         <input class="f-input" type="text" id="quality" value="best" placeholder="best">
                     </div>
@@ -780,21 +638,21 @@
                     <div class="tip-n">01</div>
                     <div class="tip-body">
                         <strong>Paste a link</strong>
-                        <p>Enter any direct download URL or media link into the URL field.</p>
+                        <p>Enter any direct download URL or media link. The extension auto-detects streams as you browse.</p>
                     </div>
                 </div>
                 <div class="tip">
                     <div class="tip-n">02</div>
                     <div class="tip-body">
                         <strong>Track in real-time</strong>
-                        <p>Progress updates are streamed live via a WebSocket connection to the backend.</p>
+                        <p>Progress updates stream live via WebSocket. Speed and ETA update as yt-dlp downloads.</p>
                     </div>
                 </div>
                 <div class="tip">
                     <div class="tip-n">03</div>
                     <div class="tip-body">
                         <strong>Retrieve your file</strong>
-                        <p>Once complete, use the Save File button to download the finished file.</p>
+                        <p>Once complete, use the Save File button. The correct extension is always included.</p>
                     </div>
                 </div>
             </div>
@@ -803,16 +661,16 @@
     </div>
 
     <!-- Downloads List -->
-    <div class="card dl-card">
+    <div class="card">
         <div class="card-hd">
             <span class="card-title">Downloads</span>
             <span class="card-sub" id="dlCount">No tasks</span>
         </div>
         <div class="dl-list" id="dlList">
             <div class="empty">
-                <div class="empty-pearl"></div>
+                <div class="empty-icon">↓</div>
                 <div class="empty-head">Nothing here yet</div>
-                <p class="empty-sub">Add a URL above to begin.<br>Real-time progress will appear here.</p>
+                <p class="empty-sub">Add a URL above to begin.<br>Real-time progress appears here.</p>
             </div>
         </div>
     </div>
@@ -826,32 +684,9 @@
 </div>
 
 <script>
-    const API  = "http://localhost:8000";
-    const WS   = "ws://localhost:8000/ws";  // single port — WebSocket is now served by FastAPI
+    const API = "http://localhost:8000";
+    const WS  = "ws://localhost:8000/ws";
     let ws = null, downloads = {};
-
-    /* ── Pearl spawner ── */
-    (function() {
-        const s = document.getElementById('scene');
-        const cfg = [
-            {sz:4, l:9,  dur:20, delay:0},
-            {sz:6, l:18, dur:26, delay:4},
-            {sz:5, l:29, dur:22, delay:8},
-            {sz:7, l:41, dur:30, delay:2},
-            {sz:4, l:53, dur:24, delay:11},
-            {sz:6, l:64, dur:28, delay:6},
-            {sz:5, l:75, dur:19, delay:14},
-            {sz:8, l:84, dur:32, delay:3},
-            {sz:4, l:92, dur:21, delay:9},
-        ];
-        cfg.forEach(c => {
-            const p = document.createElement('div');
-            p.className = 'pearl-p';
-            p.style.cssText = `width:${c.sz}px;height:${c.sz}px;left:${c.l}%;bottom:-10px;`
-                + `animation-duration:${c.dur}s;animation-delay:${c.delay}s;opacity:0;`;
-            s.appendChild(p);
-        });
-    })();
 
     /* ── WebSocket ── */
     function connect() {
@@ -867,7 +702,7 @@
     function setConn(ok) {
         const el = document.getElementById('connStatus');
         el.className = ok ? 'connected' : 'disconnected';
-        document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Disconnected (start backend)';
+        document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Disconnected';
     }
 
     /* ── Data ── */
@@ -875,12 +710,13 @@
         try {
             const r    = await fetch(`${API}/list`);
             const rows = await r.json();
-            downloads = {};
-            // /list now returns objects, not tuples
+            downloads  = {};
             rows.forEach(row => {
                 const pct = typeof row.progress === 'number' ? Math.round(row.progress * 100) : 0;
-                downloads[row.id] = { id: row.id, url: row.url, filename: row.filename,
-                                      title: row.title || '', status: row.status, progress: pct };
+                downloads[row.id] = {
+                    id: row.id, url: row.url, filename: row.filename,
+                    title: row.title || '', status: row.status, progress: pct
+                };
             });
             render();
         } catch {}
@@ -888,50 +724,52 @@
 
     function patch(d) {
         if (!downloads[d.id])
-            downloads[d.id] = { id:d.id, url:'Unknown', filename:'Unknown', status:'unknown', progress:0 };
+            downloads[d.id] = { id:d.id, url:'Unknown', filename:'Unknown', title:'', status:'unknown', progress:0 };
         if (d.progress !== undefined) {
-            // ensure progress is percentage
             let val = d.progress;
-            if (val <= 1) {
-                // backend may send ratio; convert
-                val = Math.round(val * 100);
-            }
+            if (val <= 1) val = Math.round(val * 100);
             downloads[d.id].progress = val;
         }
-        if (d.done)        { downloads[d.id].status = 'completed'; downloads[d.id].progress = 100; }
-        else if (d.error)  { downloads[d.id].status = 'error'; }
+        if      (d.done)      { downloads[d.id].status = 'completed';  downloads[d.id].progress = 100; }
+        else if (d.paused)    { downloads[d.id].status = 'paused'; }
+        else if (d.cancelled) { downloads[d.id].status = 'cancelled';  downloads[d.id].progress = 0; }
+        else if (d.error)     { downloads[d.id].status = 'error'; }
         else if (downloads[d.id].status === 'queued') downloads[d.id].status = 'downloading';
         render();
     }
 
     /* ── Render ── */
     function render() {
-        const items = Object.values(downloads).sort((a,b)=>b.id - a.id);
+        const items = Object.values(downloads).sort((a,b) => b.id - a.id);
         document.getElementById('sTotal').textContent  = items.length;
-        document.getElementById('sActive').textContent = items.filter(d=>d.status==='downloading').length;
-        document.getElementById('sDone').textContent   = items.filter(d=>d.status==='completed').length;
-        document.getElementById('sQueued').textContent = items.filter(d=>d.status==='queued').length;
+        document.getElementById('sActive').textContent = items.filter(d => d.status === 'downloading').length;
+        document.getElementById('sDone').textContent   = items.filter(d => d.status === 'completed').length;
+        document.getElementById('sQueued').textContent = items.filter(d => d.status === 'queued').length;
         document.getElementById('dlCount').textContent = items.length
-            ? `${items.length} task${items.length>1?'s':''}` : 'No tasks';
+            ? `${items.length} task${items.length > 1 ? 's' : ''}` : 'No tasks';
 
         const list = document.getElementById('dlList');
         if (!items.length) {
             list.innerHTML = `<div class="empty">
-                <div class="empty-pearl"></div>
+                <div class="empty-icon">↓</div>
                 <div class="empty-head">Nothing here yet</div>
-                <p class="empty-sub">Add a URL above to begin.<br>Real-time progress will appear here.</p>
+                <p class="empty-sub">Add a URL above to begin.<br>Real-time progress appears here.</p>
             </div>`;
             return;
         }
 
         list.innerHTML = items.map(dl => {
             const pct = Math.round(dl.progress || 0);
-            const url = dl.url.length > 72 ? dl.url.slice(0,72)+'…' : dl.url;
+            const url = dl.url.length > 80 ? dl.url.slice(0, 77) + '…' : dl.url;
+            const displayName = dl.title || dl.filename || 'Unknown file';
+            const showSub = dl.title && dl.filename && dl.title !== dl.filename;
             return `
             <div class="dl-item s-${dl.status}">
                 <div class="dl-head">
-                    <div class="dl-name">${dl.title || dl.filename || 'Unknown file'}</div>
-                    ${dl.title && dl.filename ? `<div class="dl-sub">${dl.filename}</div>` : ''}
+                    <div>
+                        <div class="dl-name">${displayName}</div>
+                        ${showSub ? `<div class="dl-sub">${dl.filename}</div>` : ''}
+                    </div>
                     <span class="pill p-${dl.status}">
                         <span class="pill-dot"></span>${dl.status}
                     </span>
@@ -944,14 +782,23 @@
                     <span class="prog-pct">${pct}%</span>
                     <span class="dl-id">ID #${dl.id}</span>
                 </div>
-                ${(dl.status==='completed'||dl.status==='error')?`
+                ${(dl.status === 'completed' || dl.status === 'error' || dl.status === 'cancelled') ? `
                 <div class="dl-foot">
-                    ${dl.status==='completed'?`<button class="btn-save"
-                        onclick="saveFile(${dl.id})">
-                        Save File
-                    </button>`:'<span></span>'}
-                    <button class="btn-del" onclick="deleteDl(${dl.id})" title="Remove">✕ Remove</button>
-                </div>`:''}
+                    ${dl.status === 'completed'
+                        ? `<button class="btn-save" onclick="saveFile(${dl.id})">Save File</button>`
+                        : `<span></span>`}
+                    <button class="btn-del" onclick="deleteDl(${dl.id})">Remove</button>
+                </div>` : ''}
+                ${(dl.status === 'downloading' || dl.status === 'queued') ? `
+                <div class="dl-foot">
+                    <button class="btn-pause"  onclick="pauseDl(${dl.id})">Pause</button>
+                    <button class="btn-cancel" onclick="cancelDl(${dl.id})">Cancel</button>
+                </div>` : ''}
+                ${dl.status === 'paused' ? `
+                <div class="dl-foot">
+                    <button class="btn-resume" onclick="resumeDl(${dl.id})">Resume</button>
+                    <button class="btn-cancel" onclick="cancelDl(${dl.id})">Cancel</button>
+                </div>` : ''}
             </div>`;
         }).join('');
     }
@@ -960,6 +807,24 @@
         await fetch(`${API}/download/${id}`, { method: 'DELETE' });
         delete downloads[id];
         render();
+    }
+
+    async function pauseDl(id) {
+        await fetch(`${API}/download/${id}/pause`, { method: 'POST' });
+        // UI updates via WebSocket broadcast from backend
+    }
+
+    async function resumeDl(id) {
+        const r = await fetch(`${API}/download/${id}/resume`, { method: 'POST' });
+        if (r.ok) {
+            downloads[id].status = 'queued';
+            render();
+        }
+    }
+
+    async function cancelDl(id) {
+        await fetch(`${API}/download/${id}/cancel`, { method: 'POST' });
+        // UI updates via WebSocket broadcast from backend
     }
 
     function saveFile(id) {
@@ -982,9 +847,9 @@
 
         try {
             const r = await fetch(`${API}/download`, {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({url, filename:fname, quality:qual})
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ url, filename: fname, quality: qual })
             });
             const j = await r.json();
             if (r.ok && j.id) {
@@ -992,12 +857,12 @@
                 stat.textContent = `Task queued — ID #${j.id}`;
                 document.getElementById('downloadForm').reset();
                 load();
-                setTimeout(()=>{ stat.textContent=''; stat.className=''; }, 4000);
+                setTimeout(() => { stat.textContent = ''; stat.className = ''; }, 4000);
             } else {
                 stat.className   = 'err';
-                stat.textContent = `Error: ${j.error||'Unknown error'}`;
+                stat.textContent = `Error: ${j.error || 'Unknown error'}`;
             }
-        } catch(err) {
+        } catch (err) {
             stat.className   = 'err';
             stat.textContent = `Failed: ${err.message}`;
         } finally {
