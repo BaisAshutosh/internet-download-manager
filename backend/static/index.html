@@ -544,7 +544,7 @@
             color: var(--text-2);
         }
 
-        .dl-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+        .dl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
 
         .btn-save {
             display: inline-flex;
@@ -566,6 +566,28 @@
         .btn-save:hover {
             background: rgba(123,200,160,0.18);
             box-shadow: 0 0 14px rgba(123,200,160,0.18);
+        }
+
+        .btn-del {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(200,120,120,0.2);
+            border-radius: var(--r-sm);
+            font-family: var(--sans);
+            font-size: 0.7em;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.22s;
+        }
+        .btn-del:hover {
+            background: rgba(200,120,120,0.2);
+            box-shadow: 0 0 12px rgba(200,120,120,0.15);
         }
 
         /* ═══ EMPTY STATE ═══ */
@@ -798,7 +820,7 @@
 
 <script>
     const API  = "http://localhost:8000";
-    const WS   = "ws://localhost:8765";
+    const WS   = "ws://localhost:8000/ws";  // single port — WebSocket is now served by FastAPI
     let ws = null, downloads = {};
 
     /* ── Pearl spawner ── */
@@ -838,7 +860,7 @@
     function setConn(ok) {
         const el = document.getElementById('connStatus');
         el.className = ok ? 'connected' : 'disconnected';
-        document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Disconnected';
+        document.getElementById('connLabel').textContent = ok ? 'Connected' : 'Disconnected (start backend)';
     }
 
     /* ── Data ── */
@@ -847,8 +869,11 @@
             const r    = await fetch(`${API}/list`);
             const rows = await r.json();
             downloads = {};
-            rows.forEach(([id, url, filename, status, progress]) => {
-                downloads[id] = { id, url, filename, status, progress };
+            // /list now returns objects, not tuples
+            rows.forEach(row => {
+                const pct = typeof row.progress === 'number' ? Math.round(row.progress * 100) : 0;
+                downloads[row.id] = { id: row.id, url: row.url, filename: row.filename,
+                                      status: row.status, progress: pct };
             });
             render();
         } catch {}
@@ -857,7 +882,15 @@
     function patch(d) {
         if (!downloads[d.id])
             downloads[d.id] = { id:d.id, url:'Unknown', filename:'Unknown', status:'unknown', progress:0 };
-        if (d.progress !== undefined) downloads[d.id].progress = d.progress;
+        if (d.progress !== undefined) {
+            // ensure progress is percentage
+            let val = d.progress;
+            if (val <= 1) {
+                // backend may send ratio; convert
+                val = Math.round(val * 100);
+            }
+            downloads[d.id].progress = val;
+        }
         if (d.done)        { downloads[d.id].status = 'completed'; downloads[d.id].progress = 100; }
         else if (d.error)  { downloads[d.id].status = 'error'; }
         else if (downloads[d.id].status === 'queued') downloads[d.id].status = 'downloading';
@@ -903,15 +936,22 @@
                     <span class="prog-pct">${pct}%</span>
                     <span class="dl-id">ID #${dl.id}</span>
                 </div>
-                ${dl.status==='completed'?`
+                ${(dl.status==='completed'||dl.status==='error')?`
                 <div class="dl-foot">
-                    <button class="btn-save"
+                    ${dl.status==='completed'?`<button class="btn-save"
                         onclick="saveFile(${dl.id},'${dl.filename.replace(/'/g,"\\'")}')">
                         Save File
-                    </button>
+                    </button>`:'<span></span>'}
+                    <button class="btn-del" onclick="deleteDl(${dl.id})" title="Remove">✕ Remove</button>
                 </div>`:''}
             </div>`;
         }).join('');
+    }
+
+    async function deleteDl(id) {
+        await fetch(`${API}/download/${id}`, { method: 'DELETE' });
+        delete downloads[id];
+        render();
     }
 
     function saveFile(id, fn) {

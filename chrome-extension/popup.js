@@ -12,14 +12,13 @@ const backendElem = document.getElementById("backendUrl");
 
 backendElem.textContent = backendEndpoint;
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Send message with timeout to avoid "Receiving end does not exist" error
 function sendExtensionMessage(msg) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(msg, (response) => {
       if (chrome.runtime.lastError) {
-        // ignore connection errors (background not ready yet)
-        console.warn("[Mini-IDM] Message error:", chrome.runtime.lastError);
+        console.warn("[Mini-IDM] Message error:", chrome.runtime.lastError.message);
         resolve(null);
       } else {
         resolve(response);
@@ -28,10 +27,24 @@ function sendExtensionMessage(msg) {
   });
 }
 
+// Ask the active tab's content script to rescan, optionally resetting its seen-URL cache
+function triggerContentScan(resetSeen = false) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs && tabs[0]) {
+      chrome.tabs.sendMessage(
+        tabs[0].id,
+        { force_scan: true, reset_seen: resetSeen },
+        () => { /* ignore */ }
+      );
+    }
+  });
+}
+
+// ─── List management ─────────────────────────────────────────────────────────
+
 async function loadList() {
   const resp = await sendExtensionMessage({ type: "GET_LIST" });
-  const list = resp && resp.list ? resp.list : [];
-  populateSelect(list);
+  populateSelect(resp && resp.list ? resp.list : []);
 }
 
 function populateSelect(list) {
@@ -44,60 +57,54 @@ function populateSelect(list) {
     urlSelect.appendChild(opt);
     return;
   }
-  list.forEach((item, idx) => {
+  list.forEach((item) => {
     const opt = document.createElement("option");
     opt.value = item.url;
     const method = (item.meta && item.meta.method) || "unknown";
-    // truncate long URLs
-    const displayUrl =
-      item.url.length > 60
-        ? item.url.substring(0, 57) + "..."
-        : item.url;
+    const displayUrl = item.url.length > 60 ? item.url.substring(0, 57) + "..." : item.url;
     opt.text = `[${method}] ${displayUrl}`;
-    opt.title = item.url; // full URL on hover
+    opt.title = item.url;
     urlSelect.appendChild(opt);
   });
-  if (list.length > 0) urlSelect.selectedIndex = 0;
+  urlSelect.selectedIndex = 0;
 }
 
-// send selected URL to backend
+// ─── Button handlers ─────────────────────────────────────────────────────────
+
 sendBtn.addEventListener("click", async () => {
-  // prioritize manual URL if provided, else use select
   let selected = manualUrlInput.value.trim() || urlSelect.value;
-  if (!selected) {
+  if (!selected || urlSelect.options[0]?.disabled) {
     alert("Select a URL or paste one manually");
     return;
   }
 
-  // If the detected URL is a blob: URL, it exists only in the browser's memory.
-  // Prompt the user to send the active tab's page URL (e.g. the watch page) instead.
   let url = selected;
-  if (typeof url === "string" && url.startsWith("blob:")) {
+
+  // Blob URLs exist only in browser memory — swap for the page URL so yt-dlp can handle it
+  if (url.startsWith("blob:")) {
     const ok = confirm(
-      "The selected URL is a blob URL (browser-local) and cannot be downloaded directly. Send the current page URL to the downloader instead?"
+      "The selected URL is a blob URL (browser-local) and cannot be downloaded directly.\n" +
+      "Send the current page URL to the downloader instead?"
     );
     if (!ok) return;
 
-    // get active tab page URL
     url = await new Promise((resolve) => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (!tabs || !tabs[0]) return resolve(null);
-        resolve(tabs[0].url);
+        resolve(tabs && tabs[0] ? tabs[0].url : null);
       });
     });
 
     if (!url) {
-      alert(
-        "Unable to determine the current page URL. Please open the video page and try again."
-      );
+      alert("Unable to determine the current page URL. Please open the video page and try again.");
       return;
     }
   }
-  const filename = filenameInput.value.trim() || undefined;
-  const format = formatInput.value.trim() || undefined;
 
-  sendBtn.disabled = true;
-  sendBtn.textContent = "Sending...";
+  const filename = filenameInput.value.trim() || undefined;
+  const format   = formatInput.value.trim()   || undefined;
+
+  sendBtn.disabled    = true;
+  sendBtn.textContent = "Sending…";
 
   try {
     const res = await fetch(backendEndpoint, {
@@ -107,48 +114,51 @@ sendBtn.addEventListener("click", async () => {
     });
 
     if (!res.ok) {
-      const txt = await res.text();
-      alert("Backend error: " + txt);
+      alert("Backend error: " + (await res.text()));
     } else {
       const data = await res.json();
       alert("Sent to downloader! Download ID: " + data.id);
-      // optional: remove the sent URL from list
       if (!manualUrlInput.value.trim()) {
-        chrome.runtime.sendMessage({ type: "REMOVE_URL", url: selected });
+        sendExtensionMessage({ type: "REMOVE_URL", url: selected });
       }
+      manualUrlInput.value = "";
       loadList();
-      manualUrlInput.value = ""; // clear manual input
     }
   } catch (err) {
     alert("Failed to reach backend: " + err.message);
   } finally {
-    sendBtn.disabled = false;
+    sendBtn.disabled    = false;
     sendBtn.textContent = "Send to Downloader";
   }
 });
 
-refreshBtn.addEventListener("click", () => loadList());
-clearBtn.addEventListener("click", () => {
-  sendExtensionMessage({ type: "CLEAR_LIST" });
-  loadList();
+refreshBtn.addEventListener("click", () => {
+  // Rescan without resetting — user just wants to poll for newly loaded streams
+  triggerContentScan(false);
+  // Small delay to let the scan complete before we pull the updated list
+  setTimeout(loadList, 600);
 });
 
-// listen for updates from background
+clearBtn.addEventListener("click", async () => {
+  // 1. Clear storage
+  await sendExtensionMessage({ type: "CLEAR_LIST" });
+  // 2. Reload the (now-empty) list immediately
+  await loadList();
+  // 3. KEY FIX: tell the content script to forget every URL it has seen,
+  //    then rescan — so URLs will be re-reported from scratch.
+  triggerContentScan(true /* reset_seen */);
+});
+
+// ─── Background push updates ─────────────────────────────────────────────────
+
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg && msg.type === "UPDATED_LIST") {
-    loadList();
-  }
+  if (msg && msg.type === "UPDATED_LIST") loadList();
 });
 
-// initial load with a small delay to ensure background is ready
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+// Small delay to make sure the background service worker is ready
 setTimeout(() => {
   loadList();
-  // force a content script scan for immediate detection
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs && tabs[0]) {
-      chrome.tabs.sendMessage(tabs[0].id, { force_scan: true }, (resp) => {
-        // ignore
-      });
-    }
-  });
-}, 100);
+  triggerContentScan(false);
+}, 150);

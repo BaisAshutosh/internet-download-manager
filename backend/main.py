@@ -1,43 +1,38 @@
 import asyncio
+import glob
 import json
 import sqlite3
-import threading
+import time
 from pathlib import Path
 from typing import Optional
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-import glob
+
 import uvicorn
-import websockets
-from websockets.server import WebSocketServerProtocol
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from yt_dlp import YoutubeDL
-import time
 
 DB_FILE = "downloads.db"
-WS_CLIENTS = set()
-MAIN_LOOP = None
+
+# All active WebSocket connections — managed in one place
+WS_CLIENTS: set[WebSocket] = set()
 
 
-# -----------------------------
-# 1. SQLite Database Setup
-# -----------------------------
+# ─── Database ────────────────────────────────────────────────────────────────
+
 def init_db():
     conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute(
-        """
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS downloads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT,
-            filename TEXT,
-            status TEXT,
-            progress REAL,
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            url        TEXT,
+            filename   TEXT,
+            status     TEXT,
+            progress   REAL,
             created_at TEXT
         )
-    """
-    )
+    """)
     conn.commit()
     conn.close()
 
@@ -45,197 +40,202 @@ def init_db():
 init_db()
 
 
-def update_db_progress(download_id, progress, status):
+def db_insert(url: str, filename: str) -> int:
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
     cur.execute(
-        """
-        UPDATE downloads SET progress=?, status=? WHERE id=?
-    """,
+        "INSERT INTO downloads (url, filename, status, progress, created_at) "
+        "VALUES (?, ?, 'queued', 0, datetime('now'))",
+        (url, filename),
+    )
+    row_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return row_id
+
+
+def db_update(download_id: int, progress: float, status: str):
+    conn = sqlite3.connect(DB_FILE)
+    conn.execute(
+        "UPDATE downloads SET progress=?, status=? WHERE id=?",
         (progress, status, download_id),
     )
     conn.commit()
     conn.close()
 
 
+def db_list() -> list[dict]:
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT id, url, filename, status, progress, created_at "
+        "FROM downloads ORDER BY id DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def db_delete(download_id: int) -> bool:
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM downloads WHERE id=?", (download_id,))
+    deleted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
 def sanitize_filename(name: str) -> str:
-    # remove path separators and common forbidden characters for filenames
     if not name:
         return ""
-    keep = []
-    for ch in name:
-        if ch in "\\/<>:?\"|*":
-            continue
-        keep.append(ch)
-    s = "".join(keep).strip()
-    # collapse whitespace
-    return "_".join(s.split())
+    cleaned = "".join(ch for ch in name if ch not in r'\/<>:?"| *')
+    return "_".join(cleaned.strip().split())
 
 
-# -----------------------------
-# 2. WebSocket Server
-# -----------------------------
-async def ws_handler(websocket: WebSocketServerProtocol):
-    WS_CLIENTS.add(websocket)
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except:
-        pass
-    finally:
-        WS_CLIENTS.remove(websocket)
+# ─── WebSocket broadcast ─────────────────────────────────────────────────────
 
-
-async def broadcast(event):
-    dead = []
+async def broadcast(payload: dict):
+    """Send a JSON message to every connected WebSocket client."""
+    dead: list[WebSocket] = []
     for ws in WS_CLIENTS:
         try:
-            await ws.send(json.dumps(event))
-        except:
+            await ws.send_text(json.dumps(payload))
+        except Exception:
             dead.append(ws)
-    for d in dead:
-        WS_CLIENTS.remove(d)
+    for ws in dead:
+        WS_CLIENTS.discard(ws)
 
 
-# -----------------------------
-# 3. YT-DLP Download with Progress Hook
-# -----------------------------
-async def run_download_task(download_id, url, filename, quality):
-    def hook(d):
-        """Progress hook called by yt-dlp."""
-        loop = MAIN_LOOP
+# ─── Download task ────────────────────────────────────────────────────────────
+
+async def run_download(download_id: int, url: str, filename: str, quality: str):
+    """Run yt-dlp in a thread-pool executor and stream progress back via WebSocket."""
+    loop = asyncio.get_running_loop()
+
+    def hook(d: dict):
         if d["status"] == "downloading":
-            tb = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
-            downloaded = d.get("downloaded_bytes") or d.get("downloaded_bytes") or 0
+            total      = d.get("total_bytes") or d.get("total_bytes_estimate") or 1
+            downloaded = d.get("downloaded_bytes") or 0          # FIX: was duplicated key
             try:
-                percent = float(downloaded) / float(tb) if tb else 0.0
-            except Exception:
-                percent = 0.0
-            payload = {
-                "id": download_id,
-                "progress": round(percent * 100, 2),
-                "speed": d.get("speed"),
-                "eta": d.get("eta"),
-            }
-            if loop:
-                asyncio.run_coroutine_threadsafe(broadcast(payload), loop)
-            update_db_progress(download_id, percent, "downloading")
+                pct = round(float(downloaded) / float(total) * 100, 2)
+            except (ZeroDivisionError, TypeError):
+                pct = 0.0
+
+            asyncio.run_coroutine_threadsafe(
+                broadcast({"id": download_id, "progress": pct,
+                           "speed": d.get("speed"), "eta": d.get("eta")}),
+                loop,
+            )
+            db_update(download_id, pct / 100, "downloading")
 
         elif d["status"] == "finished":
-            if loop:
-                asyncio.run_coroutine_threadsafe(
-                    broadcast({"id": download_id, "progress": 100, "done": True}),
-                    loop,
-                )
-            update_db_progress(download_id, 1.0, "completed")
+            asyncio.run_coroutine_threadsafe(
+                broadcast({"id": download_id, "progress": 100, "done": True}),
+                loop,
+            )
+            db_update(download_id, 1.0, "completed")
 
-    safe_name = sanitize_filename(filename) or f"video_{int(time.time())}"
-    ydl_opts = {
-        "outtmpl": f"downloads/{safe_name}.%(ext)s",
-        "progress_hooks": [hook],
-        "format": quality or "best",  # simplified: use best format directly
-        "noplaylist": True,
-        "quiet": False,
-        "no_warnings": False,
-    }
-
+    safe = sanitize_filename(filename) or f"video_{int(time.time())}"
     Path("downloads").mkdir(exist_ok=True)
 
-    # Run yt-dlp in a thread to avoid blocking; capture exceptions and notify UI
-    loop = asyncio.get_event_loop()
+    ydl_opts = {
+        "outtmpl":        f"downloads/{safe}.%(ext)s",
+        "progress_hooks": [hook],
+        "format":         quality or "best",
+        "noplaylist":     True,
+        "quiet":          False,
+    }
+
     try:
         await loop.run_in_executor(None, lambda: YoutubeDL(ydl_opts).download([url]))
-    except Exception as e:
-        # notify clients and update DB
-        try:
-            if MAIN_LOOP:
-                asyncio.run_coroutine_threadsafe(
-                    broadcast({"id": download_id, "error": str(e)}), MAIN_LOOP
-                )
-        except Exception:
-            pass
-        update_db_progress(download_id, 0, "error")
-        # re-raise so calling code can see it if needed
-        raise
+    except Exception as exc:
+        await broadcast({"id": download_id, "error": str(exc)})
+        db_update(download_id, 0, "error")
 
 
-# -----------------------------
-# 4. FastAPI Backend for Control
-# -----------------------------
-api = FastAPI()
+# ─── FastAPI app ──────────────────────────────────────────────────────────────
 
-# Enable CORS for Chrome extension and web UI
+api = FastAPI(title="Mini IDM")
+
 api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Serve static files (web UI)
-static_dir = Path(__file__).parent / "static"
-if static_dir.exists():
-    api.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+# Serve static files (web UI lives in ./static/)
+_static = Path(__file__).parent / "static"
+if _static.exists():
+    api.mount("/static", StaticFiles(directory=str(_static)), name="static")
 
 
 @api.get("/")
 async def root():
-    """Serve the web UI"""
-    index_file = Path(__file__).parent / "static" / "index.html"
-    if index_file.exists():
-        return HTMLResponse(content=index_file.read_text(encoding='utf-8'))
-    return JSONResponse({"message": "Web UI not found. Create static/index.html"})
+    index = Path(__file__).parent / "static" / "index.html"
+    if index.exists():
+        return HTMLResponse(index.read_text(encoding="utf-8"))
+    return JSONResponse({"message": "Place index.html in the ./static/ folder."})
 
+
+# ─── WebSocket endpoint (replaces the separate websockets server on port 8765) ─
+
+@api.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    await ws.accept()
+    WS_CLIENTS.add(ws)
+    try:
+        # Keep the connection alive; we only push, never pull
+        while True:
+            await ws.receive_text()          # handles ping/close frames
+    except WebSocketDisconnect:
+        pass
+    finally:
+        WS_CLIENTS.discard(ws)
+
+
+# ─── REST endpoints ───────────────────────────────────────────────────────────
 
 @api.post("/download")
 async def start_download(data: dict):
-    url = data["url"]
-    filename = data.get("filename", f"video_{int(time.time())}")
-    quality = data.get("quality")
+    url      = data.get("url", "").strip()
+    filename = data.get("filename") or f"video_{int(time.time())}"
+    quality  = data.get("quality") or "best"
 
-    if isinstance(url, str) and url.startswith("blob:"):
+    if not url:
+        return JSONResponse(status_code=400, content={"error": "url is required"})
+
+    if url.startswith("blob:"):
         return JSONResponse(
             status_code=400,
-            content={
-                "error": "Blob URL not supported. Send the original page or video watch URL (e.g. https://www.youtube.com/watch?v=...) instead.",
-            },
+            content={"error": "Blob URLs are browser-local and cannot be downloaded. "
+                               "Send the original watch-page URL instead."},
         )
-    # Insert into DB
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO downloads (url, filename, status, progress, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
-        (url, filename, "queued", 0),
-    )
-    download_id = cur.lastrowid
-    conn.commit()
-    conn.close()
 
-    asyncio.create_task(run_download_task(download_id, url, filename, quality))
-    return JSONResponse({"id": download_id, "status": "started"})
+    download_id = db_insert(url, filename)
+    asyncio.create_task(run_download(download_id, url, filename, quality))
+    return JSONResponse({"id": download_id, "status": "queued"})
 
 
 @api.get("/list")
 def list_downloads():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM downloads ORDER BY id DESC")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+    """Return all downloads as a list of JSON objects (not raw tuples)."""
+    return db_list()
+
+
+@api.delete("/download/{download_id}")
+def delete_download(download_id: int):
+    """Remove a download record from the database."""
+    if db_delete(download_id):
+        return JSONResponse({"deleted": download_id})
+    return JSONResponse(status_code=404, content={"error": "Download not found"})
 
 
 @api.get("/file/{download_id}")
 def get_file(download_id: int, filename: Optional[str] = None):
-    """Serve a completed download file so the browser can save it.
-
-    If `filename` is provided it will be suggested to the browser via
-    the Content-Disposition header. The browser will then prompt the user
-    where to save the file.
-    """
+    """Serve a completed download file to the browser."""
     conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
+    cur  = conn.cursor()
     cur.execute("SELECT filename, status FROM downloads WHERE id=?", (download_id,))
     row = cur.fetchone()
     conn.close()
@@ -245,48 +245,23 @@ def get_file(download_id: int, filename: Optional[str] = None):
 
     stored_name, status = row
     if status != "completed":
-        return JSONResponse(status_code=400, content={"error": "File not ready for download"})
+        return JSONResponse(status_code=400, content={"error": "File not ready yet"})
 
-    safe = sanitize_filename(stored_name)
-    # find the file on disk (matches downloads/<safe>.*)
-    matches = glob.glob(f"downloads/{safe}.*")
+    safe    = sanitize_filename(stored_name)
+    matches = glob.glob(f"downloads/{safe}.*") or glob.glob(f"downloads/{stored_name}.*")
     if not matches:
-        # try raw stored name as fallback
-        matches = glob.glob(f"downloads/{stored_name}.*")
+        return JSONResponse(status_code=404, content={"error": "File not found on disk"})
 
-    if not matches:
-        return JSONResponse(status_code=404, content={"error": "Downloaded file not found on server"})
-
-    file_path = matches[0]
-    suggested = filename or Path(file_path).name
-    return FileResponse(path=file_path, filename=suggested, media_type="application/octet-stream")
+    path      = matches[0]
+    suggested = filename or Path(path).name
+    return FileResponse(path=path, filename=suggested, media_type="application/octet-stream")
 
 
-# ---- Removed Streamlit UI from here - using web UI instead ----
-
-
-# -----------------------------
-# 6. Websocket + API Server
-# -----------------------------
-async def main():
-    global MAIN_LOOP
-    # capture the running asyncio loop so threads (yt-dlp hooks) can post messages back
-    MAIN_LOOP = asyncio.get_running_loop()
-    ws_server = websockets.serve(ws_handler, "0.0.0.0", 8765)
-
-    server_thread = threading.Thread(
-        target=lambda: uvicorn.run(api, host="0.0.0.0", port=8000, log_level="info"), daemon=True
-    )
-    server_thread.start()
-    
-    print("🚀 Backend started!")
-    print("   Web UI: http://localhost:8000")
-    print("   API: http://localhost:8000")
-    print("   WebSocket: ws://localhost:8765")
-
-    await ws_server
-    await asyncio.Future()  # keep alive indefinitely
-
+# ─── Entry point ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("🚀  Mini IDM backend starting…")
+    print("    Web UI  → http://localhost:8000")
+    print("    API     → http://localhost:8000")
+    print("    WS      → ws://localhost:8000/ws")
+    uvicorn.run(api, host="localhost", port=8000, log_level="info")

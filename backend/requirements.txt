@@ -1,9 +1,5 @@
 fastapi
 uvicorn
-aiohttp
-yt-dlp 
-requests
-pydantic
-websockets
-websocket-client
+yt-dlp
 python-multipart
+websockets
