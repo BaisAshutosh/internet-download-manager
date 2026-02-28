@@ -12,6 +12,7 @@ const backendElem = document.getElementById("backendUrl");
 
 backendElem.textContent = backendEndpoint;
 
+
 // Send message with timeout to avoid "Receiving end does not exist" error
 function sendExtensionMessage(msg) {
   return new Promise((resolve) => {

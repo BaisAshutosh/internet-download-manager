@@ -5,14 +5,15 @@ import threading
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import glob
 import uvicorn
 import websockets
 from websockets.server import WebSocketServerProtocol
 from yt_dlp import YoutubeDL
 import time
-import streamlit as st
 
 DB_FILE = "downloads.db"
 WS_CLIENTS = set()
@@ -163,6 +164,29 @@ async def run_download_task(download_id, url, filename, quality):
 # -----------------------------
 api = FastAPI()
 
+# Enable CORS for Chrome extension and web UI
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Serve static files (web UI)
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    api.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+
+@api.get("/")
+async def root():
+    """Serve the web UI"""
+    index_file = Path(__file__).parent / "static" / "index.html"
+    if index_file.exists():
+        return HTMLResponse(content=index_file.read_text(encoding='utf-8'))
+    return JSONResponse({"message": "Web UI not found. Create static/index.html"})
+
 
 @api.post("/download")
 async def start_download(data: dict):
@@ -170,8 +194,6 @@ async def start_download(data: dict):
     filename = data.get("filename", f"video_{int(time.time())}")
     quality = data.get("quality")
 
-    # Reject blob URLs early with a helpful message — blob: URLs are local to the browser
-    # and cannot be accessed by yt-dlp running on the server.
     if isinstance(url, str) and url.startswith("blob:"):
         return JSONResponse(
             status_code=400,
@@ -240,34 +262,11 @@ def get_file(download_id: int, filename: Optional[str] = None):
     return FileResponse(path=file_path, filename=suggested, media_type="application/octet-stream")
 
 
-# -----------------------------
-# 5. Streamlit UI (control panel)
-# -----------------------------
-def run_streamlit():
-    st.title("IDM-like Python Downloader")
-
-    url = st.text_input("Video URL")
-    filename = st.text_input("Filename (optional)")
-    quality = st.text_input("Quality format (yt-dlp syntax)", "best")
-
-    if st.button("Start Download"):
-        import requests
-
-        r = requests.post(
-            "http://localhost:8000/download",
-            json={"url": url, "filename": filename, "quality": quality},
-        )
-        st.success(f"Started: {r.json()}")
-
-    st.subheader("Active Downloads")
-    import requests
-
-    rows = requests.get("http://localhost:8000/list").json()
-    st.table(rows)
+# ---- Removed Streamlit UI from here - using web UI instead ----
 
 
 # -----------------------------
-# 6. Websocket + API + Streamlit
+# 6. Websocket + API Server
 # -----------------------------
 async def main():
     global MAIN_LOOP
@@ -276,12 +275,14 @@ async def main():
     ws_server = websockets.serve(ws_handler, "0.0.0.0", 8765)
 
     server_thread = threading.Thread(
-        target=lambda: uvicorn.run(api, host="0.0.0.0", port=8000), daemon=True
+        target=lambda: uvicorn.run(api, host="0.0.0.0", port=8000, log_level="info"), daemon=True
     )
     server_thread.start()
-
-    streamlit_thread = threading.Thread(target=lambda: run_streamlit(), daemon=True)
-    streamlit_thread.start()
+    
+    print("🚀 Backend started!")
+    print("   Web UI: http://localhost:8000")
+    print("   API: http://localhost:8000")
+    print("   WebSocket: ws://localhost:8765")
 
     await ws_server
     await asyncio.Future()  # keep alive indefinitely
