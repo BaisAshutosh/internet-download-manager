@@ -40,13 +40,18 @@ Your IDM now has a complete **real-time communication system** using **WebSocket
 - **8765**: WebSocket server for real-time updates
 
 **Features:**
-- REST endpoints for download management
+- Full set of REST endpoints for download management and metadata
 - SQLite database for persistent storage
 - WebSocket broadcasting for live progress
-- yt-dlp integration for downloading
+- yt-dlp integration for downloading (supports pause/resume/cancel)
 
 **Key Functions:**
+- `POST /meta?url=…` – fetch title, duration and format options
 - `POST /download` - Start a new download
+- `POST /download/{id}/pause` - Pause an active download
+- `POST /download/{id}/resume` - Resume a paused download
+- `POST /download/{id}/cancel` - Cancel an in-flight or queued download
+- `DELETE /download/{id}` – Remove history entry
 - `GET /list` - Get all downloads (HTTP REST)
 - `GET /` - Serve web UI
 - `ws://localhost:8765` - WebSocket for real-time updates
@@ -123,6 +128,28 @@ Your IDM now has a complete **real-time communication system** using **WebSocket
 | **Bandwidth** | More requests | Fewer requests | Minimal |
 | **Implemented** | ✅ Fallback | ❌ No | ✅ Primary |
 
+## Dependencies
+
+The backend requires Python 3.10+ (the Dockerfile uses **Python 3.13‑slim**) and a handful of helper binaries when running in a container. The Python packages are listed in `backend/requirements.txt`:
+
+```text
+fastapi
+uvicorn
+yt-dlp
+python-multipart
+websockets
+```
+
+System libraries installed by the `Dockerfile` include:
+
+* `ffmpeg` – used by **yt-dlp** to merge video/audio streams.
+* `nodejs` – required for YouTube’s JS‑based extraction logic.
+* `curl` – used by the built‑in healthcheck.
+
+(If you run the backend locally you only need Python and the packages above; the helper binaries are only necessary inside Docker.)
+
+A `docker-compose.yml` file is provided for container deployments. It exposes port **8000**, mounts `./downloads` for persistence, and restricts resources to 1 GiB of memory.
+
 ## Setup Instructions
 
 ### 1. Install Backend Dependencies
@@ -132,11 +159,18 @@ pip install -r requirements.txt
 ```
 
 ### 2. Start the Backend
+You can run the Python server directly:
 ```powershell
 python start.py
 ```
 
-You should see:
+Or, if you prefer containerization, build and start the service with Docker Compose:
+```powershell
+cd backend
+docker compose up --build
+```
+
+Either method will log the same startup message:
 ```
 🚀 Backend started!
    Web UI: http://localhost:8000

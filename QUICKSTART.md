@@ -1,6 +1,15 @@
 # Quick Start Guide
 
-## 1️⃣ Install Dependencies
+## 🛠 Prerequisites
+
+* **Python 3.10 or newer** (the Docker image is built on 3.13‑slim).
+* If running via Docker you also need Docker Engine (and optionally `docker-compose`).
+* The backend depends on a handful of Python libraries listed in `backend/requirements.txt`:
+  `fastapi`, `uvicorn`, `yt-dlp`, `python-multipart`, `websockets`.
+* When containerised the service also installs:
+  `ffmpeg` (for merging streams), `nodejs` (for YouTube extraction), and `curl` (for the healthcheck).
+
+## 1️⃣ Install Python Dependencies
 
 ```powershell
 cd backend
@@ -9,11 +18,20 @@ pip install -r requirements.txt
 
 ## 2️⃣ Start the Backend
 
+You can run the server directly with Python:
+
 ```powershell
 python start.py
 ```
 
-You should see:
+or start it inside a container (builds automatically on first run):
+
+```powershell
+cd backend
+docker compose up --build
+```
+
+Either command produces the same output:
 ```
 🚀 Backend started!
    Web UI: http://localhost:8000
@@ -70,6 +88,15 @@ You'll see a modern interface with a form to start downloads and real-time progr
    ↓
 5. Download completes → Download button appears
 ```
+
+### 🔌 Advanced API Endpoints (optional)
+- `POST /meta?url=<URL>` – fetch metadata and available formats
+- `POST /download` – queue a new download (JSON body: `url`, `filename`, `quality`, `title`)
+- `POST /download/{id}/pause` – pause an active download
+- `POST /download/{id}/resume` – resume a paused download
+- `POST /download/{id}/cancel` – cancel/cleanup a download
+
+These endpoints are used by the Web UI and extension but can be called directly with `curl` or your own tools.
 
 ## 🔧 Customization
 
